@@ -1,20 +1,29 @@
-const { OPCUAClient, AttributeIds } = require("node-opcua");
+const { OPCUAClient, AttributeIds, MessageSecurityMode, SecurityPolicy } = require("node-opcua");
 
-async () => {
-  const client = OPCUAClient.create();
+(async () => {
+  const client = OPCUAClient.create({
+    securityMode: MessageSecurityMode.None,
+    securityPolicy: SecurityPolicy.None,
+  });
 
-  await client.connect("opc.tcp://localhost:4840");
+  const endpointUrl = "opc.tcp://ANONYMOUS:4840/UA/PLC_SIM";
+
+  await client.connect(endpointUrl);
+
   const session = await client.createSession();
 
+  console.log("Client connected, reading value...");
+
   setInterval(async () => {
-    const dataValue = await session.read({
-      nodeId: "ns=1;s=PLC.Temperature",
-      attributeId: AttributeIds.Value,
-    });
+    try {
+      const dataValue = await session.read({
+        nodeId: "ns=1;s=PLC.Temperature",
+        attributeId: AttributeIds.Value,
+      });
 
-    console.log(dataValue.value.value);
+      console.log("Temperature:", dataValue.value.value);
+    } catch (err) {
+      console.error("Read error:", err.message);
+    }
   }, 1000);
-
-  await session.close();
-  await client.disconnect();
-};
+})();

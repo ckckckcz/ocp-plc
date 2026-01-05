@@ -1,45 +1,42 @@
-const { OPCUAServer, Variant, DataType } = require("node-opcua");
+const { OPCUAServer, Variant, DataType, MessageSecurityMode, SecurityPolicy } = require("node-opcua");
 
-async () => {
+(async () => {
   const server = new OPCUAServer({
     port: 4840,
-    resourcePath: "OpcUA/Server",
-    applicationName: "OpcUA-Server",
-    applicationUri: "urn:OpcUA-Server",
-    securityMode: SecurityMode.None,
+    resourcePath: "/UA/PLC_SIM",
+    buildInfo: {
+      productName: "PLC Simulator",
+      buildNumber: "1",
+      buildDate: new Date(),
+    },
+    securityMode: MessageSecurityMode.None,
     securityPolicy: SecurityPolicy.None,
   });
 
   await server.initialize();
-  console.log("Server Sudah Jalan Brok!");
 
   const addressSpace = server.engine.addressSpace;
-  const namespace = addressSpace.getNamespace();
+  const namespace = addressSpace.getOwnNamespace();
 
   const device = namespace.addObject({
     organizedBy: addressSpace.rootFolder.objects,
     browseName: "PLC",
   });
 
-  let temperature = namespace.addVariable({
-    componentOf: device,
-    browseName: "Temperature",
-    dataType: DataType.Double,
-    value: new Variant({
-      dataType: DataType.Double,
-      value: 25,
-    }),
-  });
+  let temperature = 25;
 
   namespace.addVariable({
     componentOf: device,
     browseName: "Temperature",
     nodeId: "ns=1;s=PLC.Temperature",
-    dataType: DataType.Double,
-    value: new Variant({
-      dataType: DataType.Double,
-      value: temperature,
-    }),
+    dataType: "Double",
+    value: {
+      get: () =>
+        new Variant({
+          dataType: DataType.Double,
+          value: temperature,
+        }),
+    },
   });
 
   setInterval(() => {
@@ -47,5 +44,9 @@ async () => {
   }, 1000);
 
   await server.start();
-  console.log("OPC UA Server started on port", server.endPoint.port);
-};
+
+  console.log("OPC UA Simulator running at:");
+  console.log(server.getEndpointUrl());
+})().catch((err) => {
+  console.error("FATAL:", err);
+});
